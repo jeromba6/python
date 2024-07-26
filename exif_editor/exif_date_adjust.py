@@ -21,8 +21,10 @@ def main():
     parser.add_argument('time', help='Time to adjust in format [DAYS:]HH:MM:SS')
     parser.add_argument('images', nargs='+', help='Image file(s)')
     parser.add_argument('-s', '--subtract', dest='substract', default=False, action='store_true', help='Subtract time from exif data (default: add)')
+    parser.add_argument('-m', '--make', dest='make', default=None, help='Filter images by exif make of camera data')
+    parser.add_argument('-t', '--type', dest='type', default=None, help='Filter images by exif type of camera data')
+    parser.add_argument('-d', '--dry-run', dest='dry_run', default=False, action='store_true' , help='Dry run (default: False)')
     args = parser.parse_args()
-
 
     time = args.time.split(':')
     if len(time) == 4:
@@ -57,16 +59,32 @@ def main():
             print('No datetime found in exif data')
             sys.exit(1)
 
+        if args.make:
+            make = exif_data.get(271)
+            if make != args.make:
+                print(f'Camera make does not match: {make}')
+                continue
+
+        if args.type:
+            type = exif_data.get(272)
+            if type != args.type:
+                print(f'Camera type does not match: {type}')
+                continue
+
         new_datetime = exif_datetime + delta_time
 
         print(f'Original datetime: {exif_datetime}')
         print(f'New datetime: {new_datetime}')
-        set_exif_datetime(image_path, new_datetime)
-        print('Time adjusted successfully')
+
+        if not args.dry_run:
+            set_exif_datetime(image_path, new_datetime)
+            print('Time adjusted successfully')
         print()
 
         count += 1
     print(f'{count} images processed')
+    if args.dry_run:
+        print('Dry run: no changes were made')
 
 
 def get_exif_data(image_path):
